@@ -5,6 +5,7 @@ FROM ubuntu:18.04
 # tar xzf mongo-c-driver-1.13.0.tar.gz
 # git clone https://github.com/mongodb/mongo-cxx-driver.git --branch releases/stable --depth 1
 # git clone https://github.com/BVLC/caffe.git
+# svn co http://llvm.org/svn/llvm-project/test-suite/trunk train.out/llvm-test-suite
 # git clone http://hera:8080/gerrit/wazuhl
 # cd wazuhl/tools
 # git clone http://hera:8080/gerrit/wazuhl-clang clang
@@ -16,6 +17,8 @@ ADD caffe /caffe
 ADD mongo-c-driver-1.13.0 /mongo-c-driver-1.13.0
 ADD mongo-cxx-driver /mongo-cxx-driver
 ADD wazuhl /wazuhl
+ADD wazuhl-training-ground /training-ground
+ADD suites /suites
 
 # Caffe dependencies.
 RUN apt-get update && apt-get install -y build-essential cmake git pkg-config libprotobuf-dev libleveldb-dev libsnappy-dev libhdf5-serial-dev protobuf-compiler libatlas-base-dev 
@@ -63,11 +66,16 @@ RUN make install
 # Wazuhl install.
 RUN apt-get update && apt-get install -y ninja-build
 
-ENV LD_LIBRARY_PATH="/usr/local/lib/:/caffe/build/lib/:"
-
 WORKDIR /
 RUN mkdir wazuhl-build
 WORKDIR /wazuhl-build
 RUN cmake -G Ninja /wazuhl -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/llvm
-RUN LD_LIBRARY_PATH=/caffe/build/lib/ ninja
+RUN ninja
 RUN ninja install
+
+ENV LD_LIBRARY_PATH="/usr/local/lib/:/caffe/build/lib/:"
+WORKDIR /
+RUN pip3 install -r training-ground/requirements.txt
+
+#ENTRYPOINT ["python", "./train.py", "/llvm/bin/clang"]
+#RUN svn co http://llvm.org/svn/llvm-project/test-suite/trunk train.out/llvm-test-suite
